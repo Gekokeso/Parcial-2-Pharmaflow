@@ -1,0 +1,150 @@
+version: '3.8'
+
+services:
+  # Base de datos MySQL (Relacional)
+  mysql:
+    image: mysql:8.0
+    container_name: pharmaflow_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword123
+      MYSQL_DATABASE: pharmaflow
+      MYSQL_USER: pharmaflow_user
+      MYSQL_PASSWORD: pharmaflow_pass
+    ports:
+      - "3307:3306"
+    volumes:
+      # Monta los scripts SQL para que se ejecuten automáticamente al iniciar
+      - ./sql-scripts/01_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./sql-scripts/02_security_roles.sql:/docker-entrypoint-initdb.d/02_security_roles.sql
+      - ./sql-scripts/03_sample_data.sql:/docker-entrypoint-initdb.d/03_sample_data.sql
+      # Volumen para persistir los datos
+      - mysql_data:/var/lib/mysql
+    networks:
+      - pharmaflow_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Base de datos MongoDB (Documentos)
+  mongodb:
+    image: mongo:7.0
+    container_name: pharmaflow_mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: adminpass123
+      MONGO_INITDB_DATABASE: pharmaflow
+    ports:
+      - "27017:27017"
+    volumes:
+      # Monta el script de inicialización
+      - ./mongo-scripts/01.ensayos_clinicos.js:/docker-entrypoint-initdb.d/01.ensayos_clinicos.js
+      # Volumen para persistir los datos
+      - mongodb_data:/data/db
+    networks:
+      - pharmaflow_network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Base de datos Redis (Clave-Valor)
+  redis:
+    image: redis:7.2-alpine
+    container_name: pharmaflow_redis
+    restart: always
+    command: redis-server --requirepass redispass123 --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - pharmaflow_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redispass123", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Base de datos Neo4j (Grafos) - OPCIONAL
+  neo4j:
+    image: neo4j:5.15-community
+    container_name: pharmaflow_neo4j
+    restart: always
+    environment:
+      NEO4J_AUTH: neo4j/neo4jpass123
+      NEO4J_dbms_memory_pagecache_size: 512M
+      NEO4J_dbms_memory_heap_max__size: 1G
+      NEO4JLABS_PLUGINS: '["apoc"]'
+    ports:
+      - "7474:7474"  # HTTP
+      - "7687:7687"  # Bolt
+    volumes:
+      # Volumen para persistir los datos
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+      - ./neo4j-scripts:/import
+    networks:
+      - pharmaflow_network
+    healthcheck:
+      test: ["CMD", "cypher-shell", "-u", "neo4j", "-p", "neo4jpass123", "RETURN 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # phpMyAdmin (Interfaz gráfica para MySQL) - OPCIONAL
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: pharmaflow_phpmyadmin
+    restart: always
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: rootpassword123
+    ports:
+      - "8080:80"
+    depends_on:
+      - mysql
+    networks:
+      - pharmaflow_network
+
+  # Mongo Express (Interfaz gráfica para MongoDB) - OPCIONAL
+  mongo-express:
+    image: mongo-express:latest
+    container_name: pharmaflow_mongo_express
+    restart: always
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: adminpass123
+      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: adminpass123
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mongodb
+    networks:
+      - pharmaflow_network
+
+# Definición de volúmenes (almacenamiento persistente)
+volumes:
+  mysql_data:
+    driver: local
+  mongodb_data:
+    driver: local
+  redis_data:
+    driver: local
+  neo4j_data:
+    driver: local
+  neo4j_logs:
+    driver: local
+
+# Red personalizada para que los contenedores se comuniquen
+networks:
+  pharmaflow_network:
+    driver: bridge

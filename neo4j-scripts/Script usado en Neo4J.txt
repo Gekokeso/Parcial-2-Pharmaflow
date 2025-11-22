@@ -1,0 +1,174 @@
+// Crear constraints para mejor performance
+CREATE CONSTRAINT compuesto_id IF NOT EXISTS FOR (c:Compuesto) REQUIRE c.id IS UNIQUE;
+CREATE CONSTRAINT medicamento_id IF NOT EXISTS FOR (m:Medicamento) REQUIRE m.id IS UNIQUE;
+CREATE CONSTRAINT principio_activo_id IF NOT EXISTS FOR (pa:PrincipioActivo) REQUIRE pa.id IS UNIQUE;
+
+// Crear nodos de compuestos químicos
+CREATE (c1:Compuesto {
+    id: "COMP001",
+    nombre: "Paracetamol",
+    nombre_quimico: "N-(4-hidroxifenil)acetamida",
+    formula_quimica: "C8H9NO2",
+    peso_molecular: 151.16,
+    tipo: "analgesico_antipiretico",
+    estado: "activo"
+});
+
+CREATE (c2:Compuesto {
+    id: "COMP002", 
+    nombre: "Ibuprofeno",
+    nombre_quimico: "Ácido (RS)-2-(4-isobutilfenil)propiónico",
+    formula_quimica: "C13H18O2",
+    peso_molecular: 206.28,
+    tipo: "antiinflamatorio_no_esteroideo",
+    estado: "activo"
+});
+
+CREATE (c3:Compuesto {
+    id: "COMP003",
+    nombre: "Amoxicilina",
+    nombre_quimico: "(2S,5R,6R)-6-{[(2R)-2-amino-2-(4-hidroxifenil)acetil]amino}-3,3-dimetil-7-oxo-4-tia-1-azabiciclo[3.2.0]heptano-2-ácido carboxílico",
+    formula_quimica: "C16H19N3O5S",
+    peso_molecular: 365.4,
+    tipo: "antibiotico_beta_lactamico",
+    estado: "activo"
+});
+
+// Crear nodos de principios activos
+CREATE (pa1:PrincipioActivo {
+    id: "PA001",
+    nombre: "Acetaminofén",
+    mecanismo_accion: "Inhibición de la ciclooxigenasa (COX) en el SNC",
+    indicaciones: ["dolor_leve_moderado", "fiebre"],
+    contraindicaciones: ["insuficiencia_hepatica", "alergia_paracetamol"]
+});
+
+CREATE (pa2:PrincipioActivo {
+    id: "PA002",
+    nombre: "Ibuprofeno", 
+    mecanismo_accion: "Inhibición no selectiva de la ciclooxigenasa (COX-1 y COX-2)",
+    indicaciones: ["dolor", "inflamacion", "fiebre"],
+    contraindicaciones: ["ulcera_peptica", "insuficiencia_renal", "tercer_trimestre_embarazo"]
+});
+
+CREATE (pa3:PrincipioActivo {
+    id: "PA003",
+    nombre: "Amoxicilina Trihidrato",
+    mecanismo_accion: "Inhibición de la síntesis de la pared celular bacteriana",
+    indicaciones: ["infecciones_bacterianas", "infecciones_respiratorias"],
+    contraindicaciones: ["alergia_penicilinas", "mononucleosis_infecciosa"]
+});
+
+// Crear nodos de medicamentos
+CREATE (m1:Medicamento {
+    id: "MED001",
+    nombre: "Termalgin",
+    nombre_comercial: "Termalgin 500mg",
+    dosis: "500mg",
+    forma_farmaceutica: "comprimido",
+    via_administracion: "oral",
+    laboratorio: "LabFarma S.A.",
+    registro_sanitario: "RS-58472-2023"
+});
+
+CREATE (m2:Medicamento {
+    id: "MED002",
+    nombre: "Ibupirac",
+    nombre_comercial: "Ibupirac 600mg",
+    dosis: "600mg",
+    forma_farmaceutica: "comprimido",
+    via_administracion: "oral", 
+    laboratorio: "MediSupply Corp",
+    registro_sanitario: "RS-59218-2023"
+});
+
+CREATE (m3:Medicamento {
+    id: "MED003",
+    nombre: "Amoxidal",
+    nombre_comercial: "Amoxidal 500mg",
+    dosis: "500mg",
+    forma_farmaceutica: "capsula",
+    via_administracion: "oral",
+    laboratorio: "BioPharm Inc",
+    registro_sanitario: "RS-60145-2024"
+});
+
+// Establecer relaciones
+// Compuestos -> Principios Activos
+MATCH (c:Compuesto {id: "COMP001"}), (pa:PrincipioActivo {id: "PA001"})
+CREATE (c)-[:SE_TRANSFORMA_EN {
+    proceso: "sintesis_quimica",
+    pureza: "99.8%",
+    biodisponibilidad: "85%"
+}]->(pa);
+
+MATCH (c:Compuesto {id: "COMP002"}), (pa:PrincipioActivo {id: "PA002"})
+CREATE (c)-[:SE_TRANSFORMA_EN {
+    proceso: "formulacion_farmaceutica",
+    pureza: "99.5%", 
+    biodisponibilidad: "80%"
+}]->(pa);
+
+MATCH (c:Compuesto {id: "COMP003"}), (pa:PrincipioActivo {id: "PA003"})
+CREATE (c)-[:SE_TRANSFORMA_EN {
+    proceso: "estabilizacion_trihidrato",
+    pureza: "98.9%",
+    biodisponibilidad: "75%"
+}]->(pa);
+
+// Principios Activos -> Medicamentos
+MATCH (pa:PrincipioActivo {id: "PA001"}), (m:Medicamento {id: "MED001"})
+CREATE (pa)-[:COMPONE {
+    concentracion: "500mg",
+    excipientes: ["almidon_maiz", "lactosa", "estearato_magnesio"]
+}]->(m);
+
+MATCH (pa:PrincipioActivo {id: "PA002"}), (m:Medicamento {id: "MED002"})
+CREATE (pa)-[:COMPONE {
+    concentracion: "600mg",
+    excipientes: ["celulosa_microcristalina", "croscarmelosa_sodica", "silice_coloidal"]
+}]->(m);
+
+MATCH (pa:PrincipioActivo {id: "PA003"}), (m:Medicamento {id: "MED003"})
+CREATE (pa)-[:COMPONE {
+    concentracion: "500mg",
+    excipientes: ["gelatina", "talco", "dioxido_titanio"]
+}]->(m);
+
+// Interacciones entre medicamentos
+MATCH (m1:Medicamento {id: "MED001"}), (m2:Medicamento {id: "MED002"})
+CREATE (m1)-[:INTERACCIONA_CON {
+    tipo: "farmacodinamica",
+    severidad: "leve",
+    descripcion: "Puede aumentar el riesgo de daño hepático con uso prolongado",
+    recomendaciones: "Monitorizar función hepática periódicamente",
+    evidencia: "estudios_clinicos",
+    nivel_evidencia: "B"
+}]->(m2);
+
+MATCH (m2:Medicamento {id: "MED002"}), (m3:Medicamento {id: "MED003"})
+CREATE (m2)-[:INTERACCIONA_CON {
+    tipo: "farmacocinética", 
+    severidad: "moderada",
+    descripcion: "Puede reducir la concentración plasmática del antibiótico",
+    recomendaciones: "Separar la administración por al menos 2 horas",
+    evidencia: "estudios_farmacocineticos",
+    nivel_evidencia: "A"
+}]->(m3);
+
+// Relaciones de categorías terapéuticas
+CREATE (cat1:Categoria {nombre: "Analgésicos", tipo: "sintomatico"});
+CREATE (cat2:Categoria {nombre: "Antiinflamatorios", tipo: "sintomatico"});
+CREATE (cat3:Categoria {nombre: "Antibióticos", tipo: "etiológico"});
+
+MATCH (m1:Medicamento {id: "MED001"}), (cat:Categoria {nombre: "Analgésicos"})
+CREATE (m1)-[:PERTENECE_A]->(cat);
+
+MATCH (m2:Medicamento {id: "MED002"}), (cat1:Categoria {nombre: "Analgésicos"}), (cat2:Categoria {nombre: "Antiinflamatorios"})
+CREATE (m2)-[:PERTENECE_A]->(cat1)
+CREATE (m2)-[:PERTENECE_A]->(cat2);
+
+MATCH (m3:Medicamento {id: "MED003"}), (cat:Categoria {nombre: "Antibióticos"})
+CREATE (m3)-[:PERTENECE_A]->(cat);
+
+RETURN "Base de datos de grafos inicializada correctamente" AS mensaje;

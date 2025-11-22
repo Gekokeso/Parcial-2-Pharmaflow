@@ -1,0 +1,15 @@
+# Configuración básica para Redis
+requirepass redispassword
+
+# Persistencia
+save 900 1
+save 300 10
+save 60 10000
+
+# Límites de memoria
+maxmemory 256mb
+maxmemory-policy allkeys-lru
+
+# Logging
+loglevel notice
+logfile /data/redis.log
